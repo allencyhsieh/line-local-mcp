@@ -3,9 +3,9 @@ from typing import Any
 import pytest
 from mcp import Client
 
-from line_mcp_local.aliases import ContactAliases
-from line_mcp_local.config import Settings
-from line_mcp_local.server import create_server
+from line_local_mcp.aliases import ContactAliases
+from line_local_mcp.config import Settings
+from line_local_mcp.server import create_server
 
 
 class FakeClient:

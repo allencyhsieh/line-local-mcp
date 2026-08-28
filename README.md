@@ -1,4 +1,4 @@
-# line-mcp-local
+# line-local-mcp
 
 A privacy-first, read-only [Model Context Protocol](https://modelcontextprotocol.io/)
 gateway for a user-owned, locally synchronized LINE archive.
@@ -53,7 +53,7 @@ token to stdout:
 claude mcp add --scope user --transport stdio line-local \
   --env LINE_API_BASE=https://your-private-archive.example \
   --env 'LINE_API_TOKEN_COMMAND=your-password-manager read line-archive-token' \
-  -- uvx --from git+https://github.com/allencyhsieh/line-mcp-local line-mcp-local
+  -- uvx --from git+https://github.com/allencyhsieh/line-local-mcp line-local-mcp
 ```
 
 For a quick local setup, `LINE_API_TOKEN` is also accepted, but the value may be
@@ -63,7 +63,7 @@ stored in the MCP host's configuration:
 claude mcp add --scope user --transport stdio line-local \
   --env LINE_API_BASE=http://127.0.0.1:8765 \
   --env LINE_API_TOKEN=replace-me \
-  -- uvx --from git+https://github.com/allencyhsieh/line-mcp-local line-mcp-local
+  -- uvx --from git+https://github.com/allencyhsieh/line-local-mcp line-local-mcp
 ```
 
 Verify with:
@@ -81,8 +81,8 @@ claude mcp get line-local
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/allencyhsieh/line-mcp-local",
-        "line-mcp-local"
+        "git+https://github.com/allencyhsieh/line-local-mcp",
+        "line-local-mcp"
       ],
       "env": {
         "LINE_API_BASE": "http://127.0.0.1:8765",
@@ -98,7 +98,7 @@ claude mcp get line-local
 Copy `aliases.example.json` outside the repository, edit it, and configure its path:
 
 ```bash
-export LINE_MCP_ALIASES_FILE="$HOME/.config/line-mcp-local/aliases.json"
+export LINE_MCP_ALIASES_FILE="$HOME/.config/line-local-mcp/aliases.json"
 ```
 
 The keys are canonical people; each list contains former display names or alternate
@@ -152,8 +152,8 @@ closed.
 ## Development
 
 ```bash
-git clone https://github.com/allencyhsieh/line-mcp-local
-cd line-mcp-local
+git clone https://github.com/allencyhsieh/line-local-mcp
+cd line-local-mcp
 uv sync --extra dev
 uv run pytest
 uv run ruff check .
@@ -163,7 +163,7 @@ Run the MCP Inspector:
 
 ```bash
 LINE_API_BASE=http://127.0.0.1:8765 LINE_API_TOKEN=test \
-  uv run mcp dev src/line_mcp_local/server.py
+  uv run mcp dev src/line_local_mcp/server.py
 ```
 
 ## License

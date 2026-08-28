@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from line_mcp_local.aliases import AliasFileError, ContactAliases
+from line_local_mcp.aliases import AliasFileError, ContactAliases
 
 
 def test_alias_resolves_to_canonical_and_keeps_requested_first(tmp_path):

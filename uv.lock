@@ -423,7 +423,7 @@ wheels = [
 ]
 
 [[package]]
-name = "line-mcp-local"
+name = "line-local-mcp"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

@@ -1,6 +1,6 @@
 import pytest
 
-from line_mcp_local.redaction import RedactionError, Redactor, basic_redact
+from line_local_mcp.redaction import RedactionError, Redactor, basic_redact
 
 
 @pytest.mark.parametrize(

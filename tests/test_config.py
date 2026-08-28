@@ -1,6 +1,6 @@
 import pytest
 
-from line_mcp_local.config import ConfigurationError, Settings
+from line_local_mcp.config import ConfigurationError, Settings
 
 
 def test_requires_api_base(monkeypatch):
