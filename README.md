@@ -7,8 +7,11 @@ It lets Claude Code, Claude Desktop, Codex, and other MCP hosts search chat hist
 without automating the LINE UI or granting the model permission to send messages.
 
 > This project is independent and is not affiliated with or endorsed by LY
-> Corporation or LINE. It does not provide a LINE scraper. You supply a compatible
-> local archive API and are responsible for complying with applicable terms and laws.
+> Corporation or LINE. LINE is a trademark of LY Corporation and is used here only
+> to identify compatibility. This repository contains no LINE source code, SDK code,
+> logos, icons, or chat data. It does not provide a LINE scraper. You supply a
+> compatible local archive API and are responsible for complying with applicable
+> terms and laws.
 
 ## Why this exists
 
@@ -166,4 +169,3 @@ LINE_API_BASE=http://127.0.0.1:8765 LINE_API_TOKEN=test \
 ## License
 
 MIT
-
