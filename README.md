@@ -1,0 +1,169 @@
+# line-mcp-local
+
+A privacy-first, read-only [Model Context Protocol](https://modelcontextprotocol.io/)
+gateway for a user-owned, locally synchronized LINE archive.
+
+It lets Claude Code, Claude Desktop, Codex, and other MCP hosts search chat history
+without automating the LINE UI or granting the model permission to send messages.
+
+> This project is independent and is not affiliated with or endorsed by LY
+> Corporation or LINE. It does not provide a LINE scraper. You supply a compatible
+> local archive API and are responsible for complying with applicable terms and laws.
+
+## Why this exists
+
+Existing LINE MCP projects generally target LINE Official Accounts or automate the
+desktop application. This project deliberately has a narrower trust boundary:
+
+- read-only archive access;
+- local `stdio` MCP transport—no MCP network listener;
+- HTTPS required for non-loopback archive APIs;
+- response-size and request-time limits;
+- built-in or external fail-closed redaction;
+- contact aliases for renamed LINE contacts;
+- no send, retract, mark-read, or account-management tools.
+
+## Archive API contract
+
+The server is an adapter. Your archive API must return JSON and accept a Bearer token:
+
+| Method | Path | Query | Purpose |
+|---|---|---|---|
+| GET | `/health` | — | Database health |
+| GET | `/stats` | — | Counts and date range |
+| POST | `/sync` | — | Trigger incremental synchronization |
+| GET | `/chats` | `limit` | Recent chats |
+| GET | `/recent` | `limit` | Recent messages |
+| GET | `/unread` | — | Unread messages |
+| GET | `/search` | `q`, `limit` | Full-text search |
+| GET | `/chat` | `name`, `limit` | One contact/group history |
+
+The API may return `{"error": "..."}` when a contact is not found. All other JSON
+shapes pass through unchanged after redaction.
+
+## Install for Claude Code
+
+The safest token setup uses a command that prints a short-lived or locally stored
+token to stdout:
+
+```bash
+claude mcp add --scope user --transport stdio line-local \
+  --env LINE_API_BASE=https://your-private-archive.example \
+  --env 'LINE_API_TOKEN_COMMAND=your-password-manager read line-archive-token' \
+  -- uvx --from git+https://github.com/allencyhsieh/line-mcp-local line-mcp-local
+```
+
+For a quick local setup, `LINE_API_TOKEN` is also accepted, but the value may be
+stored in the MCP host's configuration:
+
+```bash
+claude mcp add --scope user --transport stdio line-local \
+  --env LINE_API_BASE=http://127.0.0.1:8765 \
+  --env LINE_API_TOKEN=replace-me \
+  -- uvx --from git+https://github.com/allencyhsieh/line-mcp-local line-mcp-local
+```
+
+Verify with:
+
+```bash
+claude mcp get line-local
+```
+
+## Claude Desktop / generic MCP host
+
+```json
+{
+  "mcpServers": {
+    "line-local": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/allencyhsieh/line-mcp-local",
+        "line-mcp-local"
+      ],
+      "env": {
+        "LINE_API_BASE": "http://127.0.0.1:8765",
+        "LINE_API_TOKEN": "replace-me"
+      }
+    }
+  }
+}
+```
+
+## Contact aliases
+
+Copy `aliases.example.json` outside the repository, edit it, and configure its path:
+
+```bash
+export LINE_MCP_ALIASES_FILE="$HOME/.config/line-mcp-local/aliases.json"
+```
+
+The keys are canonical people; each list contains former display names or alternate
+accounts. The alias file itself is ignored by Git when named `aliases.json`.
+
+## Redaction
+
+`LINE_MCP_REDACTION_MODE` supports:
+
+- `basic` (default): masks common password, token, private-key, and API-key patterns;
+- `external`: pipes every response string through your own scanner and refuses to
+  return data if the scanner fails;
+- `off`: explicitly disables redaction. Avoid this for real chat history.
+
+External scanner example:
+
+```bash
+export LINE_MCP_REDACTION_MODE=external
+export 'LINE_MCP_REDACTOR_COMMAND=python3 /path/to/scanner.py --redact'
+```
+
+The command receives newline-delimited text on stdin and must preserve the exact
+number of lines on stdout. Exit status 0 or 1 is accepted; all other outcomes fail
+closed.
+
+## Tools
+
+- `line_health`
+- `line_stats`
+- `line_sync`
+- `line_list_chats`
+- `line_list_recent_messages`
+- `line_list_unread`
+- `line_search_messages`
+- `line_resolve_contact`
+- `line_get_messages`
+
+## Configuration
+
+| Variable | Required | Default |
+|---|---:|---|
+| `LINE_API_BASE` | yes | — |
+| `LINE_API_TOKEN` or `LINE_API_TOKEN_COMMAND` | yes | — |
+| `LINE_MCP_ALIASES_FILE` | no | — |
+| `LINE_MCP_REDACTION_MODE` | no | `basic` |
+| `LINE_MCP_REDACTOR_COMMAND` | external mode | — |
+| `LINE_MCP_TIMEOUT` | no | `30` seconds |
+| `LINE_MCP_MAX_RESPONSE_BYTES` | no | `5242880` |
+| `LINE_MCP_ALLOW_INSECURE_HTTP` | no | false |
+
+## Development
+
+```bash
+git clone https://github.com/allencyhsieh/line-mcp-local
+cd line-mcp-local
+uv sync --extra dev
+uv run pytest
+uv run ruff check .
+```
+
+Run the MCP Inspector:
+
+```bash
+LINE_API_BASE=http://127.0.0.1:8765 LINE_API_TOKEN=test \
+  uv run mcp dev src/line_mcp_local/server.py
+```
+
+## License
+
+MIT
+
