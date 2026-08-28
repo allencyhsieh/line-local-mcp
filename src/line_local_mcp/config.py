@@ -5,6 +5,8 @@ import shlex
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
+from .media import DEFAULT_MIME_ALLOW, MEDIA_MODES
+
 
 class ConfigurationError(RuntimeError):
     """Raised when required configuration is missing or unsafe."""
@@ -24,6 +26,9 @@ class Settings:
     redactor_command: tuple[str, ...] | None
     timeout_seconds: float
     max_response_bytes: int
+    media_mode: str
+    max_media_bytes: int
+    media_mime_allow: tuple[str, ...]
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -61,6 +66,20 @@ class Settings:
                 "LINE_MCP_REDACTOR_COMMAND is required when redaction mode is external"
             )
 
+        media_mode = os.getenv("LINE_MCP_MEDIA_MODE", "full").strip().lower()
+        if media_mode not in MEDIA_MODES:
+            raise ConfigurationError(
+                "LINE_MCP_MEDIA_MODE must be " + ", ".join(MEDIA_MODES)
+            )
+        allow_raw = os.getenv("LINE_MCP_MEDIA_MIME_ALLOW", "").strip()
+        media_mime_allow = (
+            tuple(
+                pattern.strip().lower() for pattern in allow_raw.split(",") if pattern.strip()
+            )
+            if allow_raw
+            else DEFAULT_MIME_ALLOW
+        )
+
         return cls(
             api_base=api_base,
             api_token=api_token,
@@ -70,4 +89,7 @@ class Settings:
             redactor_command=redactor_command,
             timeout_seconds=float(os.getenv("LINE_MCP_TIMEOUT", "30")),
             max_response_bytes=int(os.getenv("LINE_MCP_MAX_RESPONSE_BYTES", "5242880")),
+            media_mode=media_mode,
+            max_media_bytes=int(os.getenv("LINE_MCP_MAX_MEDIA_BYTES", "4194304")),
+            media_mime_allow=media_mime_allow,
         )

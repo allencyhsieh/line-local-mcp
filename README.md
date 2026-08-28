@@ -24,11 +24,13 @@ desktop application. This project deliberately has a narrower trust boundary:
 - response-size and request-time limits;
 - built-in or external fail-closed redaction;
 - contact aliases for renamed LINE contacts;
+- attachment reading gated by a MIME allow list, with no files written to disk;
 - no send, retract, mark-read, or account-management tools.
 
 ## Archive API contract
 
-The server is an adapter. Your archive API must return JSON and accept a Bearer token:
+The server is an adapter. Your archive API must accept a Bearer token and return JSON
+on every endpoint except `/media`, which returns raw bytes:
 
 | Method | Path | Query | Purpose |
 |---|---|---|---|
@@ -40,9 +42,22 @@ The server is an adapter. Your archive API must return JSON and accept a Bearer 
 | GET | `/unread` | — | Unread messages |
 | GET | `/search` | `q`, `limit` | Full-text search |
 | GET | `/chat` | `name`, `limit` | One contact/group history |
+| GET | `/attachments` | `name`, `kind`, `limit` | Attachment metadata |
+| GET | `/media` | `id` | One attachment's raw bytes |
 
 The API may return `{"error": "..."}` when a contact is not found. All other JSON
 shapes pass through unchanged after redaction.
+
+`/attachments` should return `{"attachments": [...]}`. Each entry needs a `media_id`
+that `/media` accepts; `mime`, `filename`, `kind`, `timestamp`, and sender fields pass
+through if present. An empty list is treated as "this display name has nothing", so the
+server keeps trying the remaining alias candidates.
+
+`/media` is the one binary endpoint. It must answer `404` for an unknown id—an
+`{"error": ...}` body with status `200` would be returned to the model as a JSON
+attachment. `Content-Type` types the payload; `Content-Disposition` supplies the
+filename and, when the type is `application/octet-stream`, is used to guess the type
+from the extension.
 
 ## Install for Claude Code
 
@@ -124,6 +139,39 @@ The command receives newline-delimited text on stdin and must preserve the exact
 number of lines on stdout. Exit status 0 or 1 is accepted; all other outcomes fail
 closed.
 
+## Attachments
+
+`LINE_MCP_MEDIA_MODE` controls how much of an attachment the model can reach:
+
+- `full` (default): `line_list_attachments` and `line_read_media` are both registered;
+- `metadata`: only `line_list_attachments`—the model can see that a file exists, and
+  its name and type, but cannot load its content;
+- `off`: neither tool is registered.
+
+`line_read_media` returns the attachment inline, chosen by MIME type:
+
+| Type | Returned as |
+|---|---|
+| `image/*` | image content the model can actually look at |
+| `text/*`, `application/json`, `+json`, `+xml` | UTF-8 text, passed through the redactor |
+| anything else on the allow list | an opaque `line-archive://media/<id>` embedded resource |
+
+Nothing is written to disk. `LINE_MCP_MAX_MEDIA_BYTES` (default 4 MiB) caps one
+attachment independently of `LINE_MCP_MAX_RESPONSE_BYTES`, and oversized attachments
+are refused rather than truncated.
+
+`LINE_MCP_MEDIA_MIME_ALLOW` is a comma-separated allow list of exact types and
+`type/*` wildcards. It defaults to `image/*,text/*,application/json,application/pdf,application/xml`—
+types a model can do something useful with. A type outside it is refused by name, so
+widen it deliberately:
+
+```bash
+export LINE_MCP_MEDIA_MIME_ALLOW='image/*,text/*,application/pdf,application/zip'
+```
+
+`*` allows every type. Only the text branch passes through the redactor; see
+[SECURITY.md](SECURITY.md).
+
 ## Tools
 
 - `line_health`
@@ -135,6 +183,8 @@ closed.
 - `line_search_messages`
 - `line_resolve_contact`
 - `line_get_messages`
+- `line_list_attachments` (media mode `metadata` or `full`)
+- `line_read_media` (media mode `full`)
 
 ## Configuration
 
@@ -147,6 +197,9 @@ closed.
 | `LINE_MCP_REDACTOR_COMMAND` | external mode | — |
 | `LINE_MCP_TIMEOUT` | no | `30` seconds |
 | `LINE_MCP_MAX_RESPONSE_BYTES` | no | `5242880` |
+| `LINE_MCP_MEDIA_MODE` | no | `full` |
+| `LINE_MCP_MAX_MEDIA_BYTES` | no | `4194304` |
+| `LINE_MCP_MEDIA_MIME_ALLOW` | no | readable types |
 | `LINE_MCP_ALLOW_INSECURE_HTTP` | no | false |
 
 ## Development

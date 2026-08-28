@@ -24,3 +24,33 @@ def test_allows_loopback_http(monkeypatch):
     settings = Settings.from_env()
     assert settings.api_base == "http://127.0.0.1:8765"
 
+
+
+def _base_env(monkeypatch):
+    monkeypatch.setenv("LINE_API_BASE", "http://127.0.0.1:8765")
+    monkeypatch.setenv("LINE_API_TOKEN", "test")
+    for name in ("LINE_MCP_MEDIA_MODE", "LINE_MCP_MEDIA_MIME_ALLOW", "LINE_MCP_MAX_MEDIA_BYTES"):
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_media_defaults_to_full_with_a_readable_type_allow_list(monkeypatch):
+    _base_env(monkeypatch)
+    settings = Settings.from_env()
+
+    assert settings.media_mode == "full"
+    assert settings.max_media_bytes == 4 * 1024 * 1024
+    assert "image/*" in settings.media_mime_allow
+    assert "application/zip" not in settings.media_mime_allow
+
+
+def test_rejects_unknown_media_mode(monkeypatch):
+    _base_env(monkeypatch)
+    monkeypatch.setenv("LINE_MCP_MEDIA_MODE", "sometimes")
+    with pytest.raises(ConfigurationError, match="LINE_MCP_MEDIA_MODE"):
+        Settings.from_env()
+
+
+def test_media_allow_list_is_parsed_and_normalized(monkeypatch):
+    _base_env(monkeypatch)
+    monkeypatch.setenv("LINE_MCP_MEDIA_MIME_ALLOW", " Image/* , application/ZIP ,, ")
+    assert Settings.from_env().media_mime_allow == ("image/*", "application/zip")
